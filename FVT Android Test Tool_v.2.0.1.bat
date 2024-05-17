@@ -4,7 +4,7 @@ REM 배치 파일의 작성자와 수정자 정보
 echo make by Byoungow Jeoung
 echo edit by DanWon Han
 echo create on Nov. 23, 2019
-echo update on Mar. 04, 2024
+echo update on May. 17, 2024
 
 rem Anyone can be updated when new functions implement.
 :: Default Setting
@@ -16,7 +16,7 @@ mode con cols=90 lines=90
 :FVT
 
 echo ::::::::::::::::::::::::::::::::::::::::::::::::
-echo          FVT Android Test Tool v2.0.1
+echo          FVT Android Test Tool v2.0.2
 echo ::::::::::::::::::::::::::::::::::::::::::::::::
 echo :: 1. Connect ADB                             ::
 echo :: 2. Test Information (Memory Infomation)    ::
@@ -25,7 +25,7 @@ echo :: 4. Log Collection (Logcat/Bootlog)         ::
 echo :: 5. Log Collection (Bugreport)              ::
 echo :: 6. APP PID confirmation                    ::
 echo :: 7. Mobile App Performance Measurement      ::
-echo :: 8. Screen Recording (3 min)                ::
+echo :: 8. Battery Usage Information               ::
 echo :: 9. Device Reboot                           ::
 echo :: 0. Exit                                    ::
 echo ::::::::::::::::::::::::::::::::::::::::::::::::
@@ -229,17 +229,60 @@ pause
 GOTO FVT
 
 :8
-:: 8. Screen Recording  
+:: 8. Battery Usage Information
+chcp 65001 > nul
 CLS
 echo ____________________________________________
-echo Now Screen Recording...
-echo Save Location: /sdcard/Download)
-echo If you stop the Recording, Please click the Ctrl c butoon and terminated the batch job (Yes)
+echo Battery Usage Information
+echo ____________________________________________
 
-adb shell screenrecord /sdcard/Download/BTI_FVT_NJ_ScreenRecording.mp4
+REM 앱의 패키지 이름 입력받기
+set /p PACKAGE_NAME="앱의 패키지 이름을 입력하세요: "
 
-pause
-GOTO FVT
+:LOOP
+REM 앱의 UID 가져오기
+set "UID="
+for /f "tokens=1 delims= " %%A in ('adb shell ps ^| findstr %PACKAGE_NAME%') do (
+    set "UID=%%A"
+    echo UID found: %%A
+    goto UID_FOUND
+)
+
+echo %PACKAGE_NAME% 앱의 UID를 가져올 수 없습니다.
+goto WAIT
+
+:UID_FOUND
+REM UID에서 언더바(_) 제거
+set "UID=!UID:_=!"
+echo Processed UID: !UID!
+
+REM 앱이 설치되어 있는지 확인
+if not defined UID (
+    echo %PACKAGE_NAME% 앱이 설치되어 있지 않습니다.
+    goto WAIT
+)
+
+REM 앱의 배터리 소모량 정보 초기화
+set "BATTERY_USAGE="
+
+REM 앱의 배터리 소모량 정보 가져오기
+for /f "tokens=*" %%B in ('adb shell dumpsys batterystats --charged ^| findstr /C:" UID !UID!:"') do (
+    if "%%B" neq "" (
+        set "BATTERY_USAGE=%%B"
+    )
+)
+
+REM 값이 존재하는 경우에만 출력
+if defined BATTERY_USAGE (
+    echo %PACKAGE_NAME% 앱의 배터리 소모량 정보: !BATTERY_USAGE!
+) else (
+    echo %PACKAGE_NAME% 앱의 배터리 소모량 정보를 가져올 수 없습니다.
+)
+
+:WAIT
+REM 5초 대기 후 다시 조회
+timeout /t 5 >nul
+goto LOOP
 
 :9
 :: 9. Device Reboot 
@@ -254,67 +297,5 @@ adb reboot
 pause
 GOTO FVT
 
-
-::  :6
-::  :: 6. TCP DUMP log (PCAP)
-::  CLS
-::  cd %USERPROFILE%
-::  echo ____________________________________________
-::  echo Now Log is gathering...
-::  echo Save Location: "Device (/sdcard/Download.pcap)"
-::  echo If you finish the tcpdump, Please click the Ctrl c butoon and terminated the batch job (Yes)
-::  echo ____________________________________________
-::  echo tcpdump option: tcpdump -p -vv -s 0 -i any -w
-::  
-::  echo adb push tcpdump /data/local/tmp
-::  echo adb shell tcpdump -p -vv -s 0 -i any -w /sdcard/Download.pcap
-::  :7
-:: 7. Setup Wizard SKIP (only ENG mode)
-:: CLS
-:: echo ____________________________________________
-:: echo Now, system starts the skip process...
-:: echo This Menu allowed only ENG binary
-:: 
-:: adb remount
-:: adb shell pm disable com.google.android.setupwizard
-:: adb shell pm disable com.sec.android.app.SecSetupWizard
-:: adb shell settings put global device_provisioned 1
-:: adb shell settings put secure user_setup_complete 1
-:: adb shell setprop persist.sys.setupwizard FINISH
-:: 
-:: pause
-:: GOTO FVT
-
-
-:: @echo off
-:: setlocal
-
-:: REM Check if adb is installed and accessible
-:: adb version >nul 2>&1
-:: if %errorlevel% neq 0 (
-::     echo ADB is not installed or accessible.
-::     exit /b 1
-:: )
-:: 
-:: REM Check if the package name is provided as argument
-:: if "%~1"=="" (
-::     echo Please provide the package name of the app.
-::     exit /b 1
-:: )
-:: 
-:: REM Set the package name and time stamp
-:: set packageName=%~1
-:: set timeStamp=%DATE:/=-%_%TIME::=-%
-:: 
-:: REM Remove milliseconds from the time stamp
-:: for /f "tokens=1-4 delims=,.: " %%a in ("%timeStamp%") do set timeStamp=%%a-%%b-%%c_%%d
-:: 
-:: REM Set the log file path
-:: set logFilePath=%USERPROFILE%\%packageName%_%timeStamp%.txt
-:: 
-:: REM Run adb logcat and save output to log file
-:: adb logcat -d | findstr %packageName% > "%logFilePath%"
-:: 
-:: echo Logcat output saved to: %logFilePath%
-:: exit /b 0
-
+:END
+exit /b
