@@ -17,7 +17,7 @@ mode con cols=90 lines=90
 :FVT
 
 echo ::::::::::::::::::::::::::::::::::::::::::::::::
-echo          FVT Android Test Tool v2.0.1
+echo          FVT Android Test Tool v2.0.4
 echo ::::::::::::::::::::::::::::::::::::::::::::::::
 echo :: 1. Connect ADB                             ::
 echo :: 2. Test Information (Memory Infomation)    ::
