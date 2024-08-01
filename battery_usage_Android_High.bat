@@ -117,7 +117,7 @@ set "log_file=battery_usage_%package_name%_%date:~-4%%date:~4,2%%date:~7,2%_%tim
 REM 배터리 사용량 모니터링 시작
 echo Monitoring battery usage for package: %package_name% (UID: %uid%)...
 echo Start Time: %date% %time%
-echo Start Time: %date% %time% >> %log_file%
+echo Start Time: %date% %time% >> !log_file!
 set "start_time=%time%"
 
 :BATTERY_MONITOR_LOOP
